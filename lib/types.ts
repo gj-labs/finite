@@ -28,6 +28,8 @@ export type Design = {
   status: DesignStatus;
   error?: string;
   source?: "subscription" | "parent";
+  kind?: "print" | "jewelry";
+  referenceIds?: string[]; // uploaded reference photos (e.g. a fingerprint) that guide a print pattern
   createdAt: number;
 };
 

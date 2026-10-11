@@ -116,13 +116,14 @@ function DesignPage({ memoryId }: { memoryId: string }) {
           requestId,
           status: "generating",
           source: design?.source || "parent",
+          referenceIds: design?.referenceIds, // variations of a fingerprint design keep the fingerprint
           createdAt: Date.now(),
         };
     base.requestId = requestId;
     setDesignId(base.id);
     upsertDesign(base);
     try {
-      const job = await arcade<{ jobId: string }>("pattern", { requestId, prompt: p, colors: PALETTE_HEX });
+      const job = await arcade<{ jobId: string }>("pattern", { requestId, prompt: p, colors: PALETTE_HEX, referenceIds: base.referenceIds });
       const withJob = { ...base, jobId: job.jobId };
       upsertDesign(withJob);
       await resumePattern(withJob);

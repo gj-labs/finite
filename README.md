@@ -24,6 +24,13 @@ npm run dev                   # open http://localhost:3000
 
 The confirmation page shows a QR code that links back to the memory page.
 
+### Fingerprint demo (2 minutes)
+
+Open **Fingerprint** in the nav.
+
+- **Fingerprint pendant.** Pick a shape, an initial and a metal (live from Arcade), then **Design the pendant**. Arcade designs and prices a real piece in about a minute. Jewelry is made from a prompt only: Arcade's API refuses reference images for jewelry, so the swirl is Arcade's engraving, not the child's actual print.
+- **Fingerprint keepsake.** Upload a photo of the real fingerprint (ink on white paper works best). It goes to Arcade as a reference image (`references/createUpload` → `references/create` → `patterns/create` with `referenceIds`), then continues into the normal product → make → buy flow.
+
 **Pre-bake before you present.** Run the path once before going on stage. Designs and products are saved in the browser's localStorage. Afterwards, the memory's design page opens straight to the finished pattern, so the live demo doesn't wait on generation. Use the *same browser* for the demo. Avoid "Reset demo family" (at the bottom of the story page), which clears it.
 
 ## What's in it

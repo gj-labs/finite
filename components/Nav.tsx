@@ -42,7 +42,7 @@ export function Nav() {
   const link = (href: string, label: string) => (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 text-sm transition ${
+      className={`whitespace-nowrap rounded-full px-2.5 py-1.5 text-sm transition sm:px-3 ${
         path.startsWith(href) ? "bg-navy text-cream" : "text-navy/70 hover:text-navy"
       }`}
     >
@@ -53,8 +53,9 @@ export function Nav() {
     <header className="no-print sticky top-0 z-30 border-b border-navy/5 bg-cream/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <Wordmark small />
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           {link("/story", "Siya’s story")}
+          {link("/fingerprint", "Fingerprint")}
           {link("/chapters", "Chapters")}
           {signedIn && path !== "/login" && (
             <button onClick={() => signOut({ callbackUrl: "/login" })} className="rounded-full px-3 py-1.5 text-sm text-navy/50 hover:text-navy">

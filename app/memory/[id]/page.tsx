@@ -69,9 +69,12 @@ export default function MemoryPage({ params }: { params: { id: string } }) {
         </section>
       )}
 
-      <div className="mt-8 flex justify-center">
+      <div className="mt-8 flex flex-col items-center gap-3">
         <Link href={`/memory/${m.id}/design`} className="btn-coral px-8 py-4 text-base">
           Turn this memory into a keepsake
+        </Link>
+        <Link href={`/fingerprint?memory=${m.id}`} className="text-sm text-navy/60 underline hover:text-navy">
+          Or make one from {state.child.name}&apos;s fingerprint
         </Link>
       </div>
     </div>

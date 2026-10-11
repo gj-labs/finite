@@ -75,8 +75,32 @@ export type Product = {
 };
 
 // ---- Calls ----
-export const createPattern = (requestId: string, prompt: string, colors?: string[]) =>
-  call<Job>("patterns/create", { requestId, prompt, ...(colors?.length ? { colors } : {}) });
+export const createPattern = (requestId: string, prompt: string, colors?: string[], referenceIds?: string[]) =>
+  call<Job>("patterns/create", {
+    requestId,
+    prompt,
+    ...(colors?.length ? { colors } : {}),
+    ...(referenceIds?.length ? { referenceIds } : {}),
+  });
+
+// Jewelry is made in one step: a prompt + a jewelry category → design and product (result.productId).
+// Arcade picks the options from the prompt and refuses referenceIds/colors/modelId for jewelry.
+export const createJewelry = (requestId: string, categoryId: string, prompt: string) =>
+  call<Job>("patterns/create", { requestId, categoryId, prompt });
+
+export const REFERENCE_TYPES = ["image/gif", "image/jpeg", "image/png", "image/webp"] as const;
+
+// Upload an image (e.g. a fingerprint photo) as a reference for print patterns:
+// createUpload → PUT the bytes to the signed URL → references/create.
+export async function uploadReference(requestId: string, bytes: Buffer, mediaType: string) {
+  const up = await call<{ uploadId: string; uploadUrl: string; requiredHeaders: Record<string, string> }>(
+    "references/createUpload",
+    { requestId: `${requestId}-up`, mediaType, byteLength: bytes.length }
+  );
+  const put = await fetch(up.uploadUrl, { method: "PUT", headers: up.requiredHeaders, body: new Uint8Array(bytes) });
+  if (!put.ok) throw new ArcadeError(`Arcade upload failed (${put.status})`, put.status);
+  return call<{ referenceId: string; thumbnailUrl: string }>("references/create", { requestId, uploadId: up.uploadId });
+}
 
 export const getJob = (jobId: string) => call<Job>("jobs/get", { jobId });
 

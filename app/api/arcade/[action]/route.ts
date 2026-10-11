@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import * as A from "@/lib/arcade";
-import { demoJob, demoJobStatus, DEMO_CATEGORIES, demoCategory } from "@/lib/demo";
+import { demoJob, demoJobStatus, DEMO_CATEGORIES, demoCategory, demoPendant } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ const unauthorized = async () =>
 
 // Optional per-visitor cap (GENERATIONS_PER_HOUR) on the steps that spend Arcade credits.
 // Off by default. In-memory, so it's per server instance — a speed bump, not a hard quota.
-const LIMITED = new Set(["pattern", "product"]);
+const LIMITED = new Set(["pattern", "product", "jewelry"]);
 const LIMIT = Number(process.env.GENERATIONS_PER_HOUR || 0);
 const hits = new Map<string, number[]>();
 const rateLimited = (req: NextRequest, action: string) => {
@@ -68,9 +68,32 @@ export async function POST(req: NextRequest, { params }: { params: { action: str
   try {
     switch (params.action) {
       case "pattern": {
-        const { requestId, prompt, colors } = body;
+        const { requestId, prompt, colors, referenceIds } = body;
         if (!live) return ok(demoJob("pattern", String(requestId).slice(-12)));
-        return ok(await A.createPattern(requestId, prompt, colors));
+        const refs = Array.isArray(referenceIds) ? referenceIds.filter((r: unknown) => typeof r === "string" && !r.startsWith("demo_")) : [];
+        return ok(await A.createPattern(requestId, prompt, colors, refs));
+      }
+      case "jewelry": {
+        const { requestId, categoryId, prompt } = body;
+        if (!live || String(categoryId).startsWith("demo-")) return ok(demoJob("product", String(requestId).slice(-12)));
+        return ok(await A.createJewelry(requestId, categoryId, prompt));
+      }
+      case "jewelry-categories": {
+        if (!live) return ok({ items: [{ categoryId: "demo-pendant", name: "Pendant Necklace (demo)", imageUrl: null, world: "jewelry" }], mode: "demo" });
+        const { items } = await A.listCategories();
+        return ok({ items: items.filter((c) => c.world === "jewelry"), mode: "live" });
+      }
+      case "reference": {
+        // Body: { requestId, dataUrl } — a data: URL the browser already downscaled.
+        const { requestId, dataUrl } = body;
+        const m = /^data:([^;]+);base64,(.+)$/.exec(String(dataUrl || ""));
+        if (!m || !(A.REFERENCE_TYPES as readonly string[]).includes(m[1])) {
+          return NextResponse.json({ error: "Please choose a JPEG, PNG, WebP or GIF photo." }, { status: 400 });
+        }
+        const bytes = Buffer.from(m[2], "base64");
+        if (bytes.length > 10 * 1024 * 1024) return NextResponse.json({ error: "That photo is too large (10 MB max)." }, { status: 400 });
+        if (!live) return ok({ referenceId: `demo_ref_${Date.now()}`, demo: true });
+        return ok(await A.uploadReference(requestId, bytes, m[1]));
       }
       case "job": {
         const { jobId } = body;
@@ -90,6 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: { action: str
       }
       case "category": {
         const { categoryId, selections } = body;
+        if (String(categoryId) === "demo-pendant") return ok(demoPendant(selections || {}));
         if (!live || String(categoryId).startsWith("demo-")) return ok(demoCategory(categoryId, selections || {}));
         return ok(await A.getCategory(categoryId, selections || {}));
       }

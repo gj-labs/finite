@@ -55,3 +55,15 @@ export function demoCategory(categoryId: string, selections: Record<string, stri
   for (const o of options) full[o.key] = selections[o.key] || o.values.find((v) => v.isDefault)!.value;
   return { categoryId: cat.categoryId, name: cat.name, world: "print", options, selections: full, canManufacture: true };
 }
+
+export function demoPendant(selections: Record<string, string>) {
+  const values = ["925 Sterling Silver", "14k Gold Vermeil", "14k Yellow Gold"].map((v, i) => ({ value: v, label: v, isDefault: i === 0, available: true }));
+  return {
+    categoryId: "demo-pendant",
+    name: "Pendant Necklace (demo)",
+    world: "jewelry",
+    options: [{ key: "material", label: "Material", values }],
+    selections: { material: selections.material || values[0].value },
+    canManufacture: true,
+  };
+}

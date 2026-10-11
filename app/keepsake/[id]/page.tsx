@@ -27,7 +27,7 @@ const money = (p: { amount: string; currency: string }) => {
 };
 
 export default function KeepsakePage({ params }: { params: { id: string } }) {
-  const { state, ready, upsertKeepsake } = useStore();
+  const { state, ready, upsertKeepsake, upsertDesign } = useStore();
   const k = state.keepsakes.find((x) => x.id === params.id);
   const design = k && state.designs.find((d) => d.id === k.designId);
   const memory = k && state.memories.find((m) => m.id === k.memoryId);
@@ -46,12 +46,18 @@ export default function KeepsakePage({ params }: { params: { id: string } }) {
     polling.current = true;
     setError(null);
     pollJob(k.jobId, setElapsed)
-      .then((r) => upsertKeepsake({ ...k, status: "ready", productId: r.productId }))
+      .then((r) => {
+        // Jewelry is built in one job that returns both the design and the product.
+        const d = state.designs.find((x) => x.id === k.designId);
+        if (r.patternId && d && !d.patternId) upsertDesign({ ...d, status: "approved", patternId: r.patternId });
+        upsertKeepsake({ ...k, status: "ready", productId: r.productId });
+      })
       .catch((e) => {
         setError(e instanceof Error ? e.message : "Something went wrong");
         upsertKeepsake({ ...k, status: "failed", error: e instanceof Error ? e.message : String(e) });
       })
       .finally(() => (polling.current = false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, upsertKeepsake]);
 
   // Always re-read the product (image URLs are short-lived; price must come from Arcade).
@@ -121,11 +127,17 @@ export default function KeepsakePage({ params }: { params: { id: string } }) {
       {k.status === "building" && (
         <section className="paper mt-6 flex flex-col items-center p-10 text-center">
           <div className="relative h-48 w-48">
-            <PatternImage patternId={design.patternId!} chapter={memory.chapter} className="h-full w-full rounded-3xl opacity-70" />
+            {design.patternId ? (
+              <PatternImage patternId={design.patternId} chapter={memory.chapter} className="h-full w-full rounded-3xl opacity-70" />
+            ) : (
+              <div className="h-full w-full rounded-3xl bg-gradient-to-br from-cream-deep via-gold-soft to-dusty-soft opacity-80" />
+            )}
             <div className="breathe absolute inset-0 rounded-3xl ring-4 ring-gold/50" />
           </div>
           <p className="mt-8 font-serif text-3xl text-navy">Arcade is building your {k.friendlyName.toLowerCase()}</p>
-          <p className="mt-2 text-sm text-navy/55">Matching it to a maker and pricing it · {elapsed}s</p>
+          <p className="mt-2 text-sm text-navy/55">
+            {design.kind === "jewelry" ? "Designing the piece, matching a jeweller and pricing it" : "Matching it to a maker and pricing it"} · {elapsed}s
+          </p>
         </section>
       )}
 
@@ -133,7 +145,7 @@ export default function KeepsakePage({ params }: { params: { id: string } }) {
         <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-coral/40 bg-coral-soft/50 p-4 sm:flex-row sm:items-center">
           <p className="flex-1 text-sm text-navy">{error}</p>
           {k.status === "failed" && (
-            <Link href={`/memory/${memory.id}/design`} className="btn-primary">Try again</Link>
+            <Link href={design.kind === "jewelry" ? `/fingerprint?memory=${memory.id}` : `/memory/${memory.id}/design`} className="btn-primary">Try again</Link>
           )}
         </div>
       )}
@@ -145,6 +157,10 @@ export default function KeepsakePage({ params }: { params: { id: string } }) {
               {img ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={img} alt={product?.title || k.friendlyName} className="aspect-square w-full object-cover" />
+              ) : !design.patternId ? (
+                <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-cream-deep via-gold-soft to-dusty-soft text-sm text-navy/60">
+                  {product?.demo ? "Demo placeholder — Arcade shows the real piece here" : "Loading the piece…"}
+                </div>
               ) : (
                 <div className="relative aspect-square w-full bg-cream-deep p-10">
                   <div className="h-full w-full overflow-hidden rounded-[2.2rem] shadow-[inset_0_0_40px_rgba(31,42,68,0.25),0_20px_40px_-10px_rgba(31,42,68,0.35)]">
